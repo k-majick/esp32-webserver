@@ -140,11 +140,11 @@ def main_loop():
                 conn.send("HTTP/1.1 200 OK\n")
                 conn.send("Content-Type: application/json\n")
                 conn.send("Access-Control-Allow-Origin: *\n")
-                conn.send("Access-Control-Allow-Headers: Content-Type\n")  # Add this line
+                conn.send("Access-Control-Allow-Headers: Content-Type\n")
                 conn.send("Connection: close\n\n")
                 conn.sendall(response)
                 conn.close()
-                continue  # Skip the rest of the loop for /toggle request
+                continue
 
             response = web_page(mode)
             conn.send("HTTP/1.1 200 OK\n")
