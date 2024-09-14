@@ -3,6 +3,8 @@ try:
 except:
     import socket
 from time import sleep
+from template import html_template
+import json
 
 esp32_ip = ""
 
@@ -20,8 +22,8 @@ def urldecode(encoded_str):
     return decoded_str
 
 def close_ap():
-    s.close() # close socket
-    sleep(1) # wait for port is release
+    s.close()
+    sleep(1)
     ap.active(False)
     print("Access Point closed")
     return
@@ -74,33 +76,19 @@ def web_page(mode=""):
         </form>
         """
 
-    html = f"""
-    <html>
-      <head><title>ESP32 Access Point</title></head>
-      <style>
-        body {{
-          background: black;
-          color: white;
-          font-family: sans-serif;
-        }}
-      </style>
-      <body>
-        {content}
-      </body>
-    </html>
-    """
+    html = html_template.format(content=content)
     return html
 
 def create_socket(port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
-        s.bind(("", port))  # Replace 80 with your port number
+        s.bind(("", port))
     except OSError as e:
-        if e.errno == 112:  # EADDRINUSE
+        if e.errno == 112:
             print("Port is already in use, waiting for it to be released...")
-            time.sleep(5)  # Wait for 5 seconds
-            s.bind(("", port))  # Try binding again
+            time.sleep(5)
+            s.bind(("", port))
     s.listen(5)
     print(f"Socket created on port: {port}")
     return s
@@ -109,7 +97,7 @@ s = create_socket(80)
 
 def reinitialize_socket(port):
     global s
-    s = create_socket(port)  # Reinitialize the socket
+    s = create_socket(port)
 
 def main_loop():
     while True:
@@ -147,6 +135,16 @@ def main_loop():
             if "/toggle" in request:
                 led_1.value(not led_1.value())
                 led_2.value(not led_2.value())
+                led_status = {"led_1": led_1.value(), "led_2": led_2.value()}
+                response = json.dumps({"mode": mode, "led_status": led_status})
+                conn.send("HTTP/1.1 200 OK\n")
+                conn.send("Content-Type: application/json\n")
+                conn.send("Access-Control-Allow-Origin: *\n")
+                conn.send("Access-Control-Allow-Headers: Content-Type\n")  # Add this line
+                conn.send("Connection: close\n\n")
+                conn.sendall(response)
+                conn.close()
+                continue  # Skip the rest of the loop for /toggle request
 
             response = web_page(mode)
             conn.send("HTTP/1.1 200 OK\n")
